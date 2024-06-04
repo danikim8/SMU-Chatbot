@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .chat-container {
+            width: 80%;
+            max-width: 450px;
+            background-color: #C6D9E8;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 20px;
+        }
+        .chat-header {
+            background-color: #0F3178;
+            color: #fff;
+            padding: 10px 15px;
+            text-align: center;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top-left-radius: 13px;
+            border-top-right-radius: 13px;
+            overflow: hidden;
+        }
+        .chat-body {
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+        }
+        .chat-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+        }
+        .chat-footer input[type="text"] {
+            width: calc(100% - 90px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .chat-footer button {
+            width: 60px;
+            background-color: #0F3178;
+            border: none;
+            padding: 10px;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .user-message, .bot-message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 20px;
+            text-align: left;
+            white-space: pre-wrap;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+            max-width: 50%;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .bot-message {
+            background-color: #eee;
+            margin-right: auto;
+            max-width: 70%;
+        }
+        .chat-message {
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+        }
+        .bot-profile {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        .bot-profile img {
+            width: 50px;
+            height: auto;
+            margin: 0 10px;
+            border: 2px solid #0F3178;
+        }
+    </style>
+</head>
+<body onload="welcomeMessage()">
+
+<div class="chat-container">
+    <div class="chat-header">
+        <div class="chat-header">
+          <img src="https://www.smu.ac.kr/_res/kor/img/sub1/img-sub1-signiture1-blue.png" alt="Header Image">
+        </div>
+    </div>
+    
+    <div class="chat-body" id="chatBody">
+        <!-- 채팅 내용이 여기에 표시됩니다 -->
+    </div>
+    <div class="chat-footer">
+        <input type="text" id="userInput" placeholder="메시지 입력..." onkeypress="if(event.keyCode==13) sendMessage();">
+        <button onclick="sendMessage()">전송</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        var input = document.getElementById('userInput');
+        var message = input.value.trim();
+        if (message === "") {
+            alert("메시지를 입력해주세요.");
+            return;
+        }
+        displayMessage(message, 'user');
+        await getResponse(message);
+        input.value = "";
+    }
+
+    function displayMessage(message, sender) {
+        var chatBody = document.getElementById('chatBody');
+        var messageDiv = document.createElement('div');      
+        var messageContentDiv = document.createElement('div');
+
+        messageContentDiv.textContent = message;
+        messageContentDiv.className = `${sender}-message`;
+
+        var minWidth = 17;
+        var maxWidth = chatBody.offsetWidth * 0.8;
+        var messageWidth = Math.min(Math.max(message.length * 17, minWidth), maxWidth);
+
+        messageContentDiv.style.width = `${messageWidth}px`;
+
+        messageDiv.className = `chat-message ${sender}`;
+
+        if (sender === 'bot') {
+            var botProfileDiv = document.createElement('div');
+            botProfileDiv.className = 'bot-profile';
+            var botImage = document.createElement('img');
+            botImage.src = "https://drive.google.com/file/d/1JQguq0esCT8UQAcNPMyhzUeQ2mM0PBUk/view?usp=sharing";
+            botImage.style.width = '30px';
+            botImage.style.height = '30px';
+            botImage.style.borderRadius = '50%';
+            botProfileDiv.appendChild(botImage);
+            messageDiv.appendChild(botProfileDiv);
+        }
+        messageDiv.appendChild(messageContentDiv);
+        chatBody.appendChild(messageDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    async function getResponse(message) {
+        displayMessage("잠시만 기다려주세요...", 'bot');
+        try {
+            const response = await fetch('/get-answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ question: message })
+            });
+
+            const data = await response.json();
+            const botMessage = data.answer || "오류가 발생했습니다. 다시 시도해주세요.";
+
+            var chatBody = document.getElementById('chatBody');
+            chatBody.removeChild(chatBody.lastChild);
+            displayMessage(botMessage, 'bot');
+        } catch (error) {
+            console.error('Error:', error);
+            var chatBody = document.getElementById('chatBody');
+            chatBody.removeChild(chatBody.lastChild);
+            displayMessage("오류가 발생했습니다. 다시 시도해주세요.", 'bot');
+        }
+    }
+
+    function welcomeMessage() {
+        var welcomeText = "안녕하세요!\n저는 상명대학교 챗봇 궁금하수뭉이에요!\n\n상명대학교에 관해 궁금한 것은 무엇이든지 물어보세요!";
+        displayMessage(welcomeText, 'bot');
+    }
+</script>
+
+</body>
+</html>
